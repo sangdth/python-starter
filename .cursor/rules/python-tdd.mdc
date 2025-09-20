@@ -52,12 +52,15 @@ actions:
      - Only continue to implementation after test approval
      - User must confirm each step before moving forward
 
-  4. **COVERAGE REQUIREMENTS**:
+  4. **BEHAVIOR-DRIVEN TESTING**:
 
-     - Aim for full or near-full test coverage
-     - Cover edge cases and error scenarios
-     - Test both positive and negative paths
-     - Document any untested code with clear reasoning
+     - Test USER BEHAVIOR and OUTCOMES, not implementation details
+     - Focus on "Given X input, user should get Y result"
+     - Test business logic and user workflows
+     - Avoid testing internal methods, classes, or data structures
+     - Tests should survive refactoring - they test WHAT, not HOW
+     - Cover user scenarios, edge cases, and error conditions
+     - Document any untested behaviors with clear reasoning
 
   5. **TEST FILE ORGANIZATION**:
 
@@ -101,7 +104,11 @@ actions:
   AUTO-TEST TRIGGER:
 
   - Any Python file modification automatically runs the project's configured test command
-  - Use `pytest` or `python -m unittest` for test execution
+  - **Test Command Detection Priority**:
+    1. Look for `pytest.ini`, `pyproject.toml` with pytest config, or `conftest.py` → Use `pytest`
+    2. Look for `test_*.py` files → Use `pytest` (if available) or `python -m unittest`
+    3. Look for `*_test.py` files → Use `pytest` (if available) or `python -m unittest`
+    4. Default fallback → `python -m unittest discover`
   - Must address any test failures before continuing development
   - Ensures continuous validation and early error detection
 
@@ -112,52 +119,124 @@ actions:
   - Use `pytest.raises()` for testing exceptions
   - Use `pytest.fixture` for test setup and teardown
   - Use `pytest.mark.parametrize` for parameterized tests
-  - Use descriptive test names that explain the expected behavior
-  - Test both public interfaces and edge cases
+  - **Write test names that describe USER BEHAVIOR**: `test_user_can_add_two_numbers()` not `test_add_method()`
+  - **Test public interfaces and user workflows**, not internal implementation
+  - **Focus on outcomes**: "User gets correct result" not "Method returns value"
   - Use mocking (`unittest.mock` or `pytest-mock`) for external dependencies
+  - **Avoid testing**: Private methods, internal state, implementation details
+  - **Test scenarios**: "When user enters invalid data, they get helpful error message"
+
+  BEHAVIOR-DRIVEN vs IMPLEMENTATION-DRIVEN TESTING:
+
+  ❌ **AVOID Implementation Testing**:
+  ```python
+  def test_add_method():
+      calc = Calculator()
+      result = calc.add(2, 3)
+      assert result == 5
+  
+  def test_calculator_has_add_method():
+      calc = Calculator()
+      assert hasattr(calc, 'add')
+  ```
+
+  ✅ **USE Behavior Testing**:
+  ```python
+  def test_user_can_add_numbers_and_get_correct_sum():
+      # Given: User wants to add numbers
+      calculator = Calculator()
+      
+      # When: User performs addition
+      result = calculator.add(2, 3)
+      
+      # Then: User gets the expected result
+      assert result == 5
+  
+  def test_user_gets_error_when_adding_invalid_input():
+      # Given: User tries to add non-numeric values
+      calculator = Calculator()
+      
+      # When: User attempts invalid operation
+      # Then: User gets helpful error message
+      with pytest.raises(ValueError, match="Invalid input"):
+          calculator.add("abc", 3)
+  ```
 
 examples:
 
 - input: |
   User: "Add a user authentication module"
 
-  # Correct TDD approach:
+  # Correct BEHAVIOR-DRIVEN TDD approach:
 
-  Step 1: "I'll create `test_auth.py` next to where `auth.py` will be, and write a failing test..."
+  Step 1: "I'll create `test_auth.py` and write a test that describes what a user should experience when authenticating - 'When a user provides valid credentials, they should be successfully logged in'..."
+  
+  ```python
+  def test_user_can_login_with_valid_credentials():
+      # Given: User has valid username and password
+      username = "testuser"
+      password = "validpass123"
+      
+      # When: User attempts to login
+      result = authenticate_user(username, password)
+      
+      # Then: User should be successfully authenticated
+      assert result.is_authenticated == True
+      assert result.user_id is not None
+  ```
+  
   [Wait for user approval]
-  Step 2: "Now I'll create `auth.py` with minimal code to make this test pass..."
+  Step 2: "Now I'll create `auth.py` with minimal code to make this behavior work..."
   [Wait for user approval]
-  Step 3: "Let's refactor and add the next test case..."
+  Step 3: "Let's add the next user scenario - what happens with invalid credentials..."
 
-  output: "Following TDD with co-located test files and atomic steps"
+  output: "Following behavior-driven TDD focusing on user experience"
 
 - input: |
   User: "Fix the bug in calculation"
 
-  # Correct TDD approach:
+  # Correct BEHAVIOR-DRIVEN TDD approach:
 
-  Step 1: "I'll write a test that reproduces the bug first..."
+  Step 1: "I'll write a test that describes the expected user behavior when the bug is fixed - 'When a user calculates 2 + 3, they should get 5'..."
+  
+  ```python
+  def test_user_gets_correct_calculation_result():
+      # Given: User wants to calculate 2 + 3
+      calculator = Calculator()
+      
+      # When: User performs the calculation
+      result = calculator.calculate("2 + 3")
+      
+      # Then: User should get the correct result
+      assert result == 5
+  ```
+  
   [Wait for user approval]
-  Step 2: "Now I'll fix the code to make the test pass..."
+  Step 2: "Now I'll fix the code to make this user behavior work correctly..."
 
-  output: "Bug fix following TDD principles"
+  output: "Bug fix following behavior-driven TDD principles"
 
 - input: |
   User: "Create a Calculator class with add method"
 
-  # Correct TDD approach:
+  # Correct BEHAVIOR-DRIVEN TDD approach:
 
-  Step 1: "I'll create `test_calculator.py` and write a failing test for the add method..."
+  Step 1: "I'll create `test_calculator.py` and write a test that describes what a user should experience when using the calculator..."
 
   ```python
-  def test_add_two_numbers():
-      calc = Calculator()
-      result = calc.add(2, 3)
+  def test_user_can_add_two_numbers_and_get_correct_sum():
+      # Given: User has a calculator and wants to add 2 + 3
+      calculator = Calculator()
+      
+      # When: User adds two numbers
+      result = calculator.add(2, 3)
+      
+      # Then: User should get the correct sum
       assert result == 5
   ```
 
   [Wait for user approval]
-  Step 2: "Now I'll create `calculator.py` with minimal Calculator class to make this test pass..."
+  Step 2: "Now I'll create `calculator.py` with minimal code to make this user behavior work..."
 
   ```python
   class Calculator:
@@ -166,9 +245,9 @@ examples:
   ```
 
   [Wait for user approval]
-  Step 3: "Let's add more test cases and refactor..."
+  Step 3: "Let's add more user scenarios - what happens with negative numbers, decimals, etc..."
 
-  output: "Following TDD with Python-specific patterns"
+  output: "Following behavior-driven TDD with user-focused scenarios"
 
 - input: |
   User modifies: "calculator/math.py"
